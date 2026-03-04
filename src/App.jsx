@@ -1,21 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
 
-/* ─── Asta brand colours ─── */
+/* ─── Asta brand colours — matched to asta-uk.com ─── */
 const B = {
-  navy:    "#0B1F3A",
-  navyD:   "#071629",
-  navyL:   "#122849",
-  gold:    "#C8A96E",
-  goldL:   "#D9BF8A",
-  goldD:   "#A8893E",
-  white:   "#F5F5F0",
-  grey:    "#8A9BAD",
-  greyD:   "#3A4A5A",
-  greyDD:  "#1E2D3D",
-  red:     "#E05050",
-  green:   "#3DC98A",
-  amber:   "#E0A030",
-  bg:      "#071224",
+  navy:    "#1A3A5C",   // Asta primary petrol blue
+  navyD:   "#0D2540",   // darker petrol
+  navyL:   "#1E4068",   // lighter petrol
+  gold:    "#00AEEF",   // Asta cyan/sky blue accent
+  goldL:   "#33BFFF",   // lighter cyan
+  goldD:   "#0090CC",   // darker cyan
+  white:   "#F4F7FA",
+  grey:    "#7A94AE",
+  greyD:   "#3A5068",
+  greyDD:  "#162D42",
+  red:     "#E04040",
+  green:   "#2ECC8A",
+  amber:   "#E09A20",
+  bg:      "#081A2E",   // deep petrol background
 };
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');`;
@@ -31,26 +31,30 @@ function seedHistory(len=40, failRate=0.03) {
 }
 
 const DEFAULT_SITES = [
-  { id:1, name:"Asta Connect",     url:"https://connect.asta-uk.com", interval:30, group:"Primary" },
-  { id:2, name:"Asta Public Site", url:"https://www.asta-uk.com",      interval:60, group:"Primary" },
+  { id:1, name:"Asta Connect",          url:"https://connect.asta-uk.com",                                    interval:30, group:"Asta" },
+  { id:2, name:"Asta Public Site",       url:"https://www.asta-uk.com",                                        interval:60, group:"Asta" },
+  { id:3, name:"Dale UW Connect",        url:"https://connect.daleuw.com/logon/LogonPoint/index.html",         interval:30, group:"Syndicate" },
+  { id:4, name:"Syndicate 2525 Connect", url:"https://connect.syndicate2525.co.uk/logon/LogonPoint/index.html",interval:30, group:"Syndicate" },
+  { id:5, name:"Arma Underwriting",      url:"https://connect.armaunderwriting.com/vpn/index.html",            interval:30, group:"Syndicate" },
+  { id:6, name:"Beat Capital Portal",    url:"https://portal.beatcapital.com/vpn/index.html",                  interval:30, group:"Syndicate" },
 ];
 
 function Logo() {
   return (
-    <div style={{display:"flex",alignItems:"center",gap:12}}>
+    <div style={{display:"flex",alignItems:"center",gap:14}}>
       <div style={{
-        width:42,height:42,borderRadius:8,
+        width:44,height:44,borderRadius:6,
         background:`linear-gradient(135deg,${B.gold},${B.goldD})`,
         display:"flex",alignItems:"center",justifyContent:"center",
-        boxShadow:`0 4px 16px ${B.gold}44`,
+        boxShadow:`0 4px 20px ${B.gold}55`,
       }}>
-        <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:B.navy}}>A</span>
+        <span style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#fff",letterSpacing:-1}}>A</span>
       </div>
       <div>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:B.white,letterSpacing:0.5}}>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:B.white,letterSpacing:0.5,lineHeight:1}}>
           Asta
         </div>
-        <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:B.gold,letterSpacing:3,marginTop:-2}}>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:B.gold,letterSpacing:3,marginTop:3,opacity:0.9}}>
           SERVICE MONITOR
         </div>
       </div>
@@ -113,6 +117,7 @@ function StatPill({label,value,color}) {
 function AlertModal({onClose,alerts,setAlerts}) {
   const [form,setForm]=useState({email:"",onDown:true,onRecover:true,threshold:1});
   const [saved,setSaved]=useState(false);
+  const [testState,setTestState]=useState("idle"); // idle | sending | sent | error
 
   const add=()=>{
     if(!form.email||!form.email.includes("@"))return;
@@ -120,6 +125,30 @@ function AlertModal({onClose,alerts,setAlerts}) {
     setForm({email:"",onDown:true,onRecover:true,threshold:1});
     setSaved(true);
     setTimeout(()=>setSaved(false),2000);
+  };
+
+  const sendTest=async()=>{
+    if(alerts.length===0){alert("Add at least one recipient first.");return;}
+    setTestState("sending");
+    try{
+      const res=await fetch("/api/send-alert",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          recipients:alerts.map(a=>a.email),
+          siteName:"Asta Connect",
+          siteUrl:"https://connect.asta-uk.com",
+          status:"TEST",
+          latency:142,
+        }),
+      });
+      const data=await res.json();
+      setTestState(data.success?"sent":"error");
+      setTimeout(()=>setTestState("idle"),4000);
+    }catch(e){
+      setTestState("error");
+      setTimeout(()=>setTestState("idle"),4000);
+    }
   };
 
   const inp={
@@ -210,7 +239,23 @@ function AlertModal({onClose,alerts,setAlerts}) {
         </button>
 
         {alerts.length>0&&(
-          <div style={{marginTop:24}}>
+          <div style={{marginTop:16}}>
+            <button onClick={sendTest} disabled={testState==="sending"} style={{
+              width:"100%",
+              background:testState==="sent"?`${B.green}22`:testState==="error"?`${B.red}22`:"transparent",
+              color:testState==="sent"?B.green:testState==="error"?B.red:B.grey,
+              border:`1px solid ${testState==="sent"?B.green:testState==="error"?B.red:B.greyDD}`,
+              borderRadius:8,padding:"11px",cursor:testState==="sending"?"wait":"pointer",
+              fontFamily:"'DM Sans',sans-serif",fontWeight:500,fontSize:14,
+              transition:"all 0.3s",marginBottom:16,
+            }}>
+              {testState==="sending"?"⏳ Sending test email...":testState==="sent"?"✓ Test email sent! Check your inbox":testState==="error"?"✗ Send failed — check API key & sender":"🧪 Send Test Email to All Recipients"}
+            </button>
+          </div>
+        )}
+
+        {alerts.length>0&&(
+          <div style={{marginTop:8}}>
             <div style={{fontSize:10,letterSpacing:2,color:B.grey,fontFamily:"'DM Mono',monospace",marginBottom:10}}>
               CONFIGURED RECIPIENTS ({alerts.length})
             </div>
@@ -395,21 +440,50 @@ export default function App() {
     setLog(p=>[{time:new Date().toLocaleTimeString(),msg,type},...p].slice(0,60));
   },[]);
 
+  const sendEmailAlert=useCallback(async(site,statusLabel,latency,alertList)=>{
+    if(!alertList||alertList.length===0)return;
+    try{
+      await fetch("/api/send-alert",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          recipients:alertList.map(a=>a.email),
+          siteName:site.name,
+          siteUrl:site.url,
+          status:statusLabel,
+          latency,
+        }),
+      });
+    }catch(e){console.error("Alert failed:",e);}
+  },[]);
+
   const checkSite=useCallback((id)=>{
     setSites(p=>p.map(s=>s.id===id?{...s,status:STATUS.CHECKING}:s));
     setTimeout(()=>{
-      setSites(p=>p.map(s=>{
-        if(s.id!==id)return s;
+      setSites(p=>{
+        const site=p.find(s=>s.id===id);
+        if(!site)return p;
         const up=Math.random()>0.04;
         const latency=up?Math.floor(60+Math.random()*450):null;
         const entry={time:Date.now(),status:up?STATUS.UP:STATUS.DOWN,latency};
-        const prev=s.history.length?s.history[s.history.length-1].status:null;
-        if(!up) addLog(`${s.name} is OFFLINE`,"error");
-        else if(prev===STATUS.DOWN) addLog(`${s.name} recovered — back online`,"success");
-        return {...s,status:up?STATUS.UP:STATUS.DOWN,history:[...s.history,entry].slice(-60)};
-      }));
+        const prev=site.history.length?site.history[site.history.length-1].status:null;
+        if(!up){
+          addLog(`${site.name} is OFFLINE`,"error");
+          setAlerts(al=>{
+            if(al.some(a=>a.onDown))sendEmailAlert(site,"DOWN",latency,al.filter(a=>a.onDown));
+            return al;
+          });
+        } else if(prev===STATUS.DOWN){
+          addLog(`${site.name} recovered — back online`,"success");
+          setAlerts(al=>{
+            if(al.some(a=>a.onRecover))sendEmailAlert(site,"RECOVERED",latency,al.filter(a=>a.onRecover));
+            return al;
+          });
+        }
+        return p.map(s=>s.id===id?{...s,status:up?STATUS.UP:STATUS.DOWN,history:[...s.history,entry].slice(-60)}:s);
+      });
     },400+Math.random()*900);
-  },[addLog]);
+  },[addLog,sendEmailAlert]);
 
   useEffect(()=>{const t=setInterval(()=>setTick(n=>n+1),5000);return()=>clearInterval(t);},[]);
   useEffect(()=>{
